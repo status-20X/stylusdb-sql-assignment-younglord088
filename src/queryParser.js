@@ -1,18 +1,26 @@
-// src/queryParser.js
+const fs = require('fs');
+const csv = require('csv-parser');
+const { parse } = require('json2csv');
 
-function parseQuery(query) {
-    const selectRegex = /SELECT (.+) FROM (.+)/i;
-    const match = query.match(selectRegex);
+function readCSV(filePath) {
+    const results = [];
 
-    if (match) {
-        const [, fields, table] = match;
-        return {
-            fields: fields.split(',').map(field => field.trim()),
-            table: table.trim()
-        };
-    } else {
-        throw new Error('Invalid query format');
-    }
+    return new Promise((resolve, reject) => {
+        fs.createReadStream(filePath)
+            .pipe(csv())
+            .on('data', (data) => results.push(data))
+            .on('end', () => {
+                resolve(results);
+            })
+            .on('error', (error) => {
+                reject(error);
+            });
+    });
 }
 
-module.exports = parseQuery;
+async function writeCSV(filename, data) {
+    const csv = parse(data);
+    fs.writeFileSync(filename, csv);
+}
+
+module.exports = {readCSV,writeCSV};

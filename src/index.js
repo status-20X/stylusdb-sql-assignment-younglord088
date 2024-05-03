@@ -1,20 +1,26 @@
-// src/index.js
+const fs = require('fs');
+const csv = require('csv-parser');
+const { parse } = require('json2csv');
 
-const parseQuery = require('./queryParser');
-const readCSV = require('./csvReader');
+function readCSV(filePath) {
+    const results = [];
 
-async function executeSELECTQuery(query) {
-    const { fields, table } = parseQuery(query);
-    const data = await readCSV(`${table}.csv`);
-    
-    // Filter the fields based on the query
-    return data.map(row => {
-        const filteredRow = {};
-        fields.forEach(field => {
-            filteredRow[field] = row[field];
-        });
-        return filteredRow;
+    return new Promise((resolve, reject) => {
+        fs.createReadStream(filePath)
+            .pipe(csv())
+            .on('data', (data) => results.push(data))
+            .on('end', () => {
+                resolve(results);
+            })
+            .on('error', (error) => {
+                reject(error);
+            });
     });
 }
 
-module.exports = executeSELECTQuery;
+async function writeCSV(filename, data) {
+    const csv = parse(data);
+    fs.writeFileSync(filename, csv);
+}
+
+module.exports = {readCSV,writeCSV};
