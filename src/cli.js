@@ -1,26 +1,45 @@
-const fs = require('fs');
-const csv = require('csv-parser');
-const { parse } = require('json2csv');
+#!/usr/bin/env node
 
-function readCSV(filePath) {
-    const results = [];
+const readline = require("readline");
+const { executeSELECTQuery, executeINSERTQuery,executeDELETEQuery,} = require("./index");
 
-    return new Promise((resolve, reject) => {
-        fs.createReadStream(filePath)
-            .pipe(csv())
-            .on('data', (data) => results.push(data))
-            .on('end', () => {
-                resolve(results);
-            })
-            .on('error', (error) => {
-                reject(error);
-            });
-    });
-}
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
-async function writeCSV(filename, data) {
-    const csv = parse(data);
-    fs.writeFileSync(filename, csv);
-}
+rl.setPrompt("SQL> ");
+console.log(
+  'SQL Query Engine CLI. Enter your SQL commands, or type "exit" to quit.'
+);
 
-module.exports = {readCSV,writeCSV};
+rl.prompt();
+
+rl.on("line", async (line) => {
+  if (line.toLowerCase() === "exit") {
+    rl.close();
+    return;
+  }
+
+  try {
+    if (line.toLowerCase().startsWith("select")) {
+      const result = await executeSELECTQuery(line);
+      console.log("Result:", result);
+    } else if (line.toLowerCase().startsWith("insert into")) {
+      const result = await executeINSERTQuery(line);
+      console.log(result.message);
+    } else if (line.toLowerCase().startsWith("delete from")) {
+      const result = await executeDELETEQuery(line);
+      console.log(result.message);
+    } else {
+      console.log("Unsupported command");
+    }
+  } catch (error) {
+    console.error("Error:", error.message);
+  }
+
+  rl.prompt();
+}).on("close", () => {
+  console.log("Exiting SQL CLI");
+  process.exit(0);
+});
